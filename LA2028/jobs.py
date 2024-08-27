@@ -10,8 +10,3 @@ def return_five():
 def add_one(arg):
     return arg + 1
 
-
-@job
-def do_stuff():
-    add_one(return_five())
-    print("doing stuff")

@@ -1,5 +1,10 @@
 from dagster import asset
+from ...resources.minio_io import MinioResource
 
 @asset
-def UploadMinioFile() -> None:
-    print(1)
+def ListMinioObjects(minio: MinioResource) -> list:
+    return minio.list_objects("highjump")
+
+# @asset
+# def GetMinioObject(bucket: str, object_name: str) -> str:
+#     pass

@@ -9,7 +9,7 @@ all_assets = [*core_assets]
 
 resources = {
     "minio": minio_io.MinioResource(
-        endpoint=EnvVar("MINIO_ENDPOINT"), access_key=EnvVar("MINIO_ACCESS"), secret_key=EnvVar("MINIO_SECRET")
+        endpoint=EnvVar("MINIO_URL"), access_key=EnvVar("MINIO_API_ACCESSKEY"), secret_key=EnvVar("MINIO_API_SECRETKEY"), port=EnvVar("MINIO_PORT")
     ),
     # "label_studio": label_studio_io.LabelStudioResource,
     "postgres": postgres_io.PostgresResource(

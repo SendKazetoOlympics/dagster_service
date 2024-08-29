@@ -1,9 +1,9 @@
 from dagster import Definitions, load_assets_from_package_module, EnvVar
 
-from .assets import core
+from .assets import video
 from .resources import minio_io, label_studio_io, postgres_io
 
-core_assets = load_assets_from_package_module(core, group_name="core")
+core_assets = load_assets_from_package_module(video, group_name="core")
 
 all_assets = [*core_assets]
 

@@ -7,7 +7,7 @@ class GetVideoByDateConfig(Config):
     end_date: str
 
 @op
-def GetVideoByDate(postgres: PostgresResource, config: GetVideoByDateConfig):
+def GetVideoByDate(postgres: PostgresResource, config: GetVideoByDateConfig) -> list:
     date_list = postgres.selectVideoByDate(config.start_date, config.end_date)
     return date_list
 

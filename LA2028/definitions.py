@@ -1,11 +1,12 @@
 from dagster import Definitions, load_assets_from_package_module, EnvVar
 
-from .assets import video
+from .assets import video, time_annotation
 from .resources import minio_io, label_studio_io, postgres_io
 
-core_assets = load_assets_from_package_module(video, group_name="core")
+video_assets = load_assets_from_package_module(video, group_name="video")
+time_annotation_assets = load_assets_from_package_module(time_annotation, group_name="time_annotation")
 
-all_assets = [*core_assets]
+all_assets = [*video_assets, *time_annotation_assets]
 
 resources = {
     "minio": minio_io.MinioResource(

@@ -7,12 +7,18 @@ class GetVideoByDateConfig(Config):
     end_date: str
 
 @op
-def GetVideoByDate(postgres: PostgresResource, config: GetVideoByDateConfig) -> list:
-    return postgres.selectVideoByDate(config.start_date, config.end_date)
+def GetVideoByDate(postgres: PostgresResource, config: GetVideoByDateConfig):
+    date_list = postgres.selectVideoByDate(config.start_date, config.end_date)
+    return date_list
+
+@op
+def GetVideosURL(minio: MinioResource, objects: list) -> list[str]:
+    return [minio.get_object_presigned_url("highjump", data[1]) for data in objects]
 
 @graph_asset
-def ListVideos():
-    return GetVideoByDate()
+def ListVideos() -> list:
+    return GetVideosURL(objects=GetVideoByDate())
+    # return GetVideoByDate()
 
 # @graph_asset
 # def ListMinioObjects(minio: MinioResource):# -> list:

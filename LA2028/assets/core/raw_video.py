@@ -20,12 +20,6 @@ def ListVideos() -> list:
     return GetVideosURL(objects=GetVideoByDate())
     # return GetVideoByDate()
 
-# @graph_asset
-# def ListMinioObjects(minio: MinioResource):# -> list:
-#     print(1)
-#     return []
-    # return minio.list_objects("highjump")
+# Get frames best on time annotation
 
-# @asset
-# def GetMinioObject(bucket: str, object_name: str) -> str:
-#     pass
+

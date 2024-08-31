@@ -2,11 +2,13 @@ from dagster import Definitions, load_assets_from_package_module, EnvVar
 
 from .assets import core, time_annotation
 from .resources import minio_io, label_studio_io, postgres_io
+from .assets.core.frames import ListTimeAnnotations
 
-video_assets = load_assets_from_package_module(core, group_name="core")
+core_assets = load_assets_from_package_module(core, group_name="core")
 time_annotation_assets = load_assets_from_package_module(time_annotation, group_name="time_annotation")
 
-all_assets = [*video_assets, *time_annotation_assets]
+all_assets = [*core_assets, *time_annotation_assets]
+all_jobs = [ListTimeAnnotations]
 
 resources = {
     "minio": minio_io.MinioResource(
@@ -22,4 +24,4 @@ resources = {
     ),
 }
 
-defs = Definitions(assets=all_assets, resources=resources)
+defs = Definitions(assets=all_assets, resources=resources, jobs=all_jobs)

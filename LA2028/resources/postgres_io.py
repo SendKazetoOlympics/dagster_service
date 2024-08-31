@@ -29,4 +29,5 @@ class PostgresResource(ConfigurableResource):
         client = self.get_client()
         cursor = client.cursor()
         cursor.execute("SELECT * FROM time_annotations WHERE video_id = %s", (video_id,))
-        return cursor.fetchall()
+        result = cursor.fetchall()
+        return result

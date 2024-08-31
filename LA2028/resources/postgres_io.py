@@ -31,3 +31,9 @@ class PostgresResource(ConfigurableResource):
         cursor.execute("SELECT * FROM time_annotations WHERE video_id = %s", (video_id,))
         result = cursor.fetchall()
         return result
+    
+    def insertFrame(self, frame_id: int, video_id: int) -> None:
+        client = self.get_client()
+        with client:
+            with client.cursor() as cursor:
+                cursor.execute("INSERT INTO frames (id, source_video_id) VALUES (%s, %s)", (frame_id, video_id))

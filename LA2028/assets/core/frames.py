@@ -21,7 +21,7 @@ def get_time_from_frame(frame: int, fps: float) -> float:
 
 
 @op
-def crop_frames_from_video(minio: MinioResource, video_url: str, video_name: str, config: CropFrameConfig) -> MaterializeResult:
+def crop_frames_from_video(minio: MinioResource, postgres: PostgresResource, video_url: str, video_name: str, config: CropFrameConfig) -> MaterializeResult:
     cap = cv2.VideoCapture(video_url)
     upload_path_prefix = video_name.removeprefix("raw_data/").removesuffix(".mp4")
     upload_path_prefix = 'extracted_frames/' + upload_path_prefix + '_'
@@ -40,6 +40,7 @@ def crop_frames_from_video(minio: MinioResource, video_url: str, video_name: str
                 bytes.seek(0)
                 minio.put_object(
                     upload_path_prefix+str(upload_counter)+'.jpeg', bytes, size, content_type="image/jpeg")
+                postgres.insertFrame(upload_path_prefix+str(upload_counter)+'.jpeg', video_name)
                 upload_counter += 1
                 gap_counter = 0
             else:
@@ -54,7 +55,7 @@ def crop_frames_from_video_by_date(minio: MinioResource, postgres: PostgresResou
     videos = get_videos_by_date(postgres=postgres, config=config.get_video_by_date_config)
     urls = get_videos_url(minio=minio, videos=videos)
     for video, url in zip(videos,urls):
-        crop_frames_from_video(minio, url, video[1], config)
+        crop_frames_from_video(minio, postgres, url, video[1], config)
 
 @graph_asset
 def raw_video_frames():

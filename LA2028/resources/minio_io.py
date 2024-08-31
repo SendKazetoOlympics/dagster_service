@@ -8,6 +8,7 @@ class MinioResource(ConfigurableResource):
     access_key: str
     secret_key: str
     port: str
+    bucket_name: str
 
     def get_client(self):
         return Minio(self.endpoint + ":" + self.port, self.access_key, self.secret_key, secure=False)
@@ -16,6 +17,10 @@ class MinioResource(ConfigurableResource):
         client = self.get_client()
         return client.presigned_get_object(bucket_name, object_name)
 
-    def list_objects(self, bucket_name: str) -> list:
+    def list_objects(self) -> list:
         client = self.get_client()
-        return list(client.list_objects(bucket_name))
+        return list(client.list_objects(self.bucket_name))
+    
+    def put_object(self, object_name: str, data, size: int, content_type: str):
+        client = self.get_client()
+        return client.put_object(self.bucket_name, object_name, data, size, content_type)

@@ -32,6 +32,12 @@ class PostgresResource(ConfigurableResource):
         result = cursor.fetchall()
         return result
     
+    def getClassifiedFrames(self) -> TupleRow:
+        with self.get_client() as client:
+            with client.cursor() as cursor:
+                cursor.execute("SELECT * FROM frame_classification a JOIN frames b ON (a.frame_id = b.id)")
+                return cursor.fetchall()
+    
     def insertFrame(self, frame_id: int, video_id: int) -> None:
         client = self.get_client()
         with client:

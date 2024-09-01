@@ -1,4 +1,4 @@
-from dagster import op, job
+from dagster import op, job, graph_asset, asset, Config
 
 from ...resources.minio_io import MinioResource
 from ...resources.label_studio_io import LabelStudioResource
@@ -17,3 +17,17 @@ def upload_frames_to_label_studio(minio: MinioResource, label_studio: LabelStudi
 @job
 def upload_frames_to_label_studio_job():
     upload_frames_to_label_studio(get_frame_ids())
+
+class ClassifyingDatasetConfig(Config):
+    valid_labels: list[str]
+
+@asset
+def classified_frames_dataset(minio: MinioResource, postgres: PostgresResource, config: ClassifyingDatasetConfig):
+    result = postgres.getClassifiedFrames()
+    frame_ids = [row[1] for row in result]
+    labels = [row[2] for row in result]
+    for frame_id, label in zip(frame_ids, labels):
+        if label in config.valid_labels:
+            label = label.replace(" ","_")
+            new_frame_id = frame_id.split("/")[-1]
+            minio.download_object(frame_id, f"data/annotated_frames/{label}/{new_frame_id}")

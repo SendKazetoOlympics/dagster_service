@@ -17,9 +17,9 @@ class MinioResource(ConfigurableResource):
         client = self.get_client()
         return client.presigned_get_object(self.bucket_name, object_name)
 
-    def list_objects(self) -> list:
+    def list_objects(self, prefix: str) -> list:
         client = self.get_client()
-        return list(client.list_objects(self.bucket_name))
+        return list(client.list_objects(self.bucket_name, prefix=prefix, recursive=True))
     
     def put_object(self, object_name: str, data, size: int, content_type: str):
         client = self.get_client()

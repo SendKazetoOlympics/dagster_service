@@ -11,4 +11,4 @@ class LabelStudioResource(ConfigurableResource):
     
     def create_task(self, project_id: str, url: str, file_name: str):
         client = self.get_client()
-        return client.tasks.create(project=project_id, data={"image": url, "file_name": file_name})
+        return client.tasks.create(project=project_id, data={"img": url, "file_name": file_name})

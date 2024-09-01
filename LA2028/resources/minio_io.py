@@ -13,9 +13,9 @@ class MinioResource(ConfigurableResource):
     def get_client(self):
         return Minio(self.endpoint + ":" + self.port, self.access_key, self.secret_key, secure=False)
 
-    def get_object_presigned_url(self, bucket_name: str, object_name: str):
+    def get_object_presigned_url(self, object_name: str):
         client = self.get_client()
-        return client.presigned_get_object(bucket_name, object_name)
+        return client.presigned_get_object(self.bucket_name, object_name)
 
     def list_objects(self) -> list:
         client = self.get_client()

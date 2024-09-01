@@ -1,10 +1,11 @@
 from dagster import Definitions, load_assets_from_package_module, EnvVar
 
-from .assets import core, time_annotation
+from .assets import core, time_annotation, yolo
 from .resources import minio_io, label_studio_io, postgres_io
 
 core_assets = load_assets_from_package_module(core, group_name="core")
 time_annotation_assets = load_assets_from_package_module(time_annotation, group_name="time_annotation")
+yolo_assets = load_assets_from_package_module(yolo, group_name="yolo")
 
 all_assets = [*core_assets, *time_annotation_assets]
 

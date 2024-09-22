@@ -1,28 +1,73 @@
-from dagster import op, job, multi_asset, Config, AssetOut
+from dagster import op, job, asset, multi_asset, Config, AssetOut
 from sklearn.model_selection import train_test_split
+import numpy as np
 
 from ...resources.minio_io import MinioResource
 from ...resources.label_studio_io import LabelStudioResource
 from ...resources.postgres_io import PostgresResource
 
-@op
-def get_frame_ids(minio: MinioResource):
-    return [obj.object_name for obj in minio.list_objects("extracted_frames")]
+class UploadFrameConfig(Config):
+    project_id: str
+    n_frames: int
+    seed: int
+    valid_labels: list[str]
+
+@multi_asset(outs={"image_names": AssetOut(), "yaml": AssetOut()})
+def detection_raw_frames(minio: MinioResource, label_studio: LabelStudioResource, config: UploadFrameConfig):
+    id_list = [obj.object_name for obj in minio.list_objects("extracted_frames")]
+    if len(id_list) > config.n_frames:
+        # Shuffle the list
+        np.random.seed(config.seed)
+        np.random.shuffle(id_list)
+        id_list = id_list[:config.n_frames]
+    
+    ls_task_list = label_studio.list_tasks(project_id=config.project_id)
+    task_filenames = [task["data"]["file_name"] for task in ls_task_list]
+    for frame_id in id_list:
+        if frame_id in task_filenames:
+            continue
+        url = minio.get_object_presigned_url(frame_id)
+        label_studio.create_task(project_id=config.project_id, url=url, file_name=frame_id)
+
+    with open("data/annotated_detected_frames/data.yaml", "w") as f:
+        f.write("path: data/annotated_detected_frames\n")
+        f.write("train: train\n")
+        f.write("val: test\n")
+        f.write("\n")
+        f.write("names:\n")
+        for index, label in enumerate(config.valid_labels):
+            f.write(f"  {index}: {label.replace(' ','_')}\n")
+
+    with open("data/annotated_detected_frames/image_names.txt", "w") as f:
+        for frame_id in id_list:
+            new_frame_id = frame_id.split("/")[-1]
+            f.write(new_frame_id + "\n")
+    return "data/annotated_detected_frames/image_names.txt", "data/annotated_detected_frames/data.yaml"
+
+# @asset(deps=["detection_raw_frames"])
+# def detection_annotation(postgres: PostgresResource):
 
 @op
-def upload_frames_to_label_studio(minio: MinioResource, label_studio: LabelStudioResource, id_list: list[str]):
+def upload_frames_to_label_studio(minio: MinioResource, label_studio: LabelStudioResource,  config: UploadFrameConfig):
+    id_list = [obj.object_name for obj in minio.list_objects("extracted_frames")]
+    if len(id_list) > config.n_frames:
+        # Shuffle the list
+        np.random.shuffle(id_list)
+        id_list = id_list[:config.n_frames]
+
     for frame_id in id_list:
         url = minio.get_object_presigned_url(frame_id)
-        label_studio.create_task(project_id="8", url=url, file_name=frame_id)
+        label_studio.create_task(project_id=config.project_id, url=url, file_name=frame_id)
 
 @job
 def upload_frames_to_label_studio_job():
-    upload_frames_to_label_studio(get_frame_ids())
+    upload_frames_to_label_studio()
 
 class ClassifyingDatasetConfig(Config):
     valid_labels: list[str]
 
-@multi_asset(outs={"training_data": AssetOut(), "test_data": AssetOut(), "yaml": AssetOut()})
+
+@multi_asset(outs={"training_data": AssetOut(), "test_data": AssetOut(), "yaml": AssetOut()}, deps=["raw_video_frames"])
 def classified_frames_dataset(minio: MinioResource, postgres: PostgresResource, config: ClassifyingDatasetConfig):
     result = postgres.getClassifiedFrames()
     frame_ids = [row[1] for row in result]

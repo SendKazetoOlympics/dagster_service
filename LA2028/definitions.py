@@ -1,17 +1,15 @@
 from dagster import Definitions, load_assets_from_package_module, EnvVar
 
-from .assets import monocular_video_data, time_annotation, yolo
+from .assets import monocular_video_data, contact_detection
 from .resources import minio_io, label_studio_io, postgres_io
 
-from .assets.yolo.train import train_yolo_model_job
 
 monocular_video_assets = load_assets_from_package_module(monocular_video_data, group_name="monocular_video_data")
-time_annotation_assets = load_assets_from_package_module(time_annotation, group_name="time_annotation")
-yolo_assets = load_assets_from_package_module(yolo, group_name="yolo")
+contact_detection_assets = load_assets_from_package_module(contact_detection, group_name="contact_detection_model")
 
-all_assets = [*monocular_video_assets, *time_annotation_assets,*yolo_assets]
+all_assets = [*monocular_video_assets, *contact_detection_assets]
 
-all_job = [train_yolo_model_job]
+all_job = []
 
 resources = {
     "minio": minio_io.MinioResource(

@@ -1,21 +1,13 @@
-from dagster import graph_asset, op, Config, job, EnvVar, MaterializeResult
+from dagster import op, Config, MaterializeResult, asset, AssetKey
 import cv2
-import numpy.typing as npt
-from typing import Optional
 from io import BytesIO
 from PIL import Image
-from .common_ops import (
-    GetVideoByDateConfig,
-    GetVideoByNameConfig,
-)
 from ...resources.minio_io import MinioResource
 from ...resources.postgres_io import PostgresResource
 
 class CropFrameConfig(Config):
     storage_path: str
     n_frame_gap: int
-    get_video_by_date_config: Optional[GetVideoByDateConfig] = None
-    get_video_by_name_config: Optional[GetVideoByNameConfig] = None
 
 def get_time_from_frame(frame: int, fps: float) -> float:
     return frame * (1000.0 / fps)
@@ -49,8 +41,8 @@ def crop_frames_from_video(minio: MinioResource, postgres: PostgresResource, vid
         else:
             break
     cap.release()
-    # return frames[start_time:end_time]
 
-@graph_asset
-def raw_video_frames():
-    return crop_frames_from_video()
+@asset(deps=["video_ids"])
+def individual_frames(config: CropFrameConfig) -> None:
+    crop_frames_from_video()
+

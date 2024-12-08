@@ -1,7 +1,7 @@
 from dagster import asset, define_asset_job
 from ultralytics import YOLO
 
-@asset(deps=["training_data", "yaml"])
+@asset(deps=["training_data", "dataset_description_yaml"])
 def trained_yolo_model():
     model = YOLO("./data/models/yolov8l.pt")
     result = model.train(data='/home/kazewong/ServerFiles/LA2028/data/annotated_detected_frames/data.yaml',batch=16, epochs=100, project='data', name='finetuned_yolo_classifier')

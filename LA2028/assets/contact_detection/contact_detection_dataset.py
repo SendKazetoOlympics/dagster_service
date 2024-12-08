@@ -1,23 +1,25 @@
 from dagster import op, job, asset, multi_asset, Config, AssetOut
-from sklearn.model_selection import train_test_split
-import numpy as np
-import os
-
 from ...resources.minio_io import MinioResource
 from ...resources.label_studio_io import LabelStudioResource
 from ...resources.postgres_io import PostgresResource
+from sklearn.model_selection import train_test_split
 
+import os
+import numpy as np
 
-class UploadFrameConfig(Config):
+class DatasetConfig(Config):
     project_id: str
     n_frames: int
     seed: int
     valid_labels: list[str]
 
+@asset(deps=["individual_frames"])
+def annotations(config: Config) -> AssetOut:
+    return AssetOut(config)
 
-@multi_asset(outs={"image_names": AssetOut(), "yaml": AssetOut()})
-def detection_raw_frames(
-    minio: MinioResource, label_studio: LabelStudioResource, config: UploadFrameConfig
+@multi_asset(deps=[annotations, "individual_frames"], outs={"labeled_frames": AssetOut(), "dataset_description_yaml": AssetOut()})
+def labeled_frames_dataset(
+    minio: MinioResource, label_studio: LabelStudioResource, config: DatasetConfig
 ):
     id_list = [obj.object_name for obj in minio.list_objects("extracted_frames")]
     if len(id_list) > config.n_frames:
@@ -71,13 +73,12 @@ def detection_raw_frames(
         "data/annotated_detected_frames/data.yaml",
     )
 
-
 @multi_asset(
+    deps=["labeled_frames", "dataset_description_yaml"],
     outs={"training_data": AssetOut(), "test_data": AssetOut()},
-    deps=["image_names", "yaml"],
 )
 def annotated_dataset(
-    label_studio: LabelStudioResource, minio: MinioResource, config: UploadFrameConfig
+    label_studio: LabelStudioResource, minio: MinioResource, config: DatasetConfig
 ):
     ls_task_list = label_studio.list_tasks(project_id=config.project_id)
     train_results = []

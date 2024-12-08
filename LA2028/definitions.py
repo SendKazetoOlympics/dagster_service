@@ -5,7 +5,7 @@ from .resources import minio_io, label_studio_io, postgres_io
 
 from .assets.yolo.train import train_yolo_model_job
 
-core_assets = load_assets_from_package_module(video_data, group_name="video_data")
+core_assets = load_assets_from_package_module(monocular_video_data, group_name="monocular_video_data")
 time_annotation_assets = load_assets_from_package_module(time_annotation, group_name="time_annotation")
 yolo_assets = load_assets_from_package_module(yolo, group_name="yolo")
 

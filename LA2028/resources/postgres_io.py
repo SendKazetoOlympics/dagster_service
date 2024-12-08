@@ -25,6 +25,12 @@ class PostgresResource(ConfigurableResource):
         cursor.execute("SELECT * FROM videos WHERE cast(to_timestamp(start_time/1000) as date) BETWEEN %s AND %s ORDER BY start_time DESC", (start_date, end_date))
         return cursor.fetchall()
     
+    def selectVideoByNames(self, names: list[str]) -> TupleRow:
+        client = self.get_client()
+        cursor = client.cursor()
+        cursor.execute("SELECT * FROM videos WHERE name = ANY(%s)", (names,))
+        return cursor.fetchall()
+    
     def getTimeAnnotationsForVideo(self, video_id: str) -> TupleRow:
         client = self.get_client()
         cursor = client.cursor()

@@ -1,20 +1,23 @@
 from dagster import graph_asset, op, Config, job, EnvVar, MaterializeResult
 import cv2
 import numpy.typing as npt
+from typing import Optional
 from io import BytesIO
 from PIL import Image
 from .common_ops import (
     get_videos_by_date,
+    get_videos_by_name,
     get_videos_url,
-    GetVideoByDateConfig
+    GetVideoByDateConfig,
+    GetVideoByNameConfig,
 )
 from ...resources.minio_io import MinioResource
 from ...resources.postgres_io import PostgresResource
 
 class CropFrameConfig(Config):
     n_frame_gap: int
-    get_video_by_date_config: GetVideoByDateConfig
-
+    get_video_by_date_config: Optional[GetVideoByDateConfig] = None
+    get_video_by_name_config: Optional[GetVideoByNameConfig] = None
 
 def get_time_from_frame(frame: int, fps: float) -> float:
     return frame * (1000.0 / fps)
@@ -51,12 +54,16 @@ def crop_frames_from_video(minio: MinioResource, postgres: PostgresResource, vid
     # return frames[start_time:end_time]
 
 @op
-def crop_frames_from_video_by_date(minio: MinioResource, postgres: PostgresResource,  config: CropFrameConfig) -> MaterializeResult:
-    videos = get_videos_by_date(postgres=postgres, config=config.get_video_by_date_config)
+def crop_frames_from_video(minio: MinioResource, postgres: PostgresResource,  config: CropFrameConfig) -> MaterializeResult:
+    if config.get_video_by_date_config is not None:
+        videos = get_videos_by_date(postgres=postgres, config=config.get_video_by_date_config)
+    elif config.get_video_by_name_config is not None:
+        videos = get_videos_by_name(postgres=postgres, config=config.get_video_by_name_config)
     urls = get_videos_url(minio=minio, videos=videos)
     for video, url in zip(videos,urls):
         crop_frames_from_video(minio, postgres, url, video[1], config)
 
+
 @graph_asset
 def raw_video_frames():
-    return crop_frames_from_video_by_date()
+    return crop_frames_from_video()

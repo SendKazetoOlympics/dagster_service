@@ -55,8 +55,8 @@ def detection_raw_frames(
 
     with open("data/annotated_detected_frames/data.yaml", "w") as f:
         f.write("path: data/annotated_detected_frames\n")
-        f.write("train: train\n")
-        f.write("val: test\n")
+        f.write("train: images/train\n")
+        f.write("val: images/val\n")
         f.write("\n")
         f.write("names:\n")
         for index, label in enumerate(config.valid_labels):
@@ -94,17 +94,19 @@ def annotated_dataset(
             for annotation in task.annotations:
                 for result in annotation["result"]:
                     if result["type"] == "rectanglelabels":
+                        if result["value"]["rectanglelabels"][0] not in config.valid_labels:
+                            continue
                         label = config.valid_labels.index(
                             result["value"]["rectanglelabels"][0]
                         )
-                        x = result["value"]["x"]
-                        y = result["value"]["y"]
-                        width = result["value"]["width"]
-                        height = result["value"]["height"]
+                        x = result["value"]["x"]/100
+                        y = result["value"]["y"]/100
+                        width = result["value"]["width"]/100
+                        height = result["value"]["height"]/100
                         annotations.append((label, x, y, width, height))
-                new_frame_id = task.data["file_name"].split("/")[-1].split(".")[0]
+                new_frame_id = task.data["file_name"].split("/")[-1]
             with open(
-                "data/annotated_detected_frames/labels/train/" + new_frame_id + ".txt",
+                "data/annotated_detected_frames/labels/train/" + new_frame_id.split(".")[0] + ".txt",
                 "w",
             ) as f:
                 for annotation in annotations:
@@ -123,17 +125,19 @@ def annotated_dataset(
             for annotation in task.annotations:
                 for result in annotation["result"]:
                     if result["type"] == "rectanglelabels":
+                        if result["value"]["rectanglelabels"][0] not in config.valid_labels:
+                            continue
                         label = config.valid_labels.index(
                             result["value"]["rectanglelabels"][0]
                         )
-                        x = result["value"]["x"]
-                        y = result["value"]["y"]
-                        width = result["value"]["width"]
-                        height = result["value"]["height"]
+                        x = result["value"]["x"]/100
+                        y = result["value"]["y"]/100
+                        width = result["value"]["width"]/100
+                        height = result["value"]["height"]/100
                         annotations.append((label, x, y, width, height))
-                new_frame_id = task.data["file_name"].split("/")[-1].split(".")[0]
+                new_frame_id = task.data["file_name"].split("/")[-1]
             with open(
-                "data/annotated_detected_frames/labels/val/" + new_frame_id + ".txt",
+                "data/annotated_detected_frames/labels/val/" + new_frame_id.split(".")[0] + ".txt",
                 "w",
             ) as f:
                 for annotation in annotations:

@@ -7,6 +7,9 @@ class GetVideoByDateConfig(Config):
     start_date: str
     end_date: str
 
+class GetVideoByNameConfig(Config):
+    names: list[str]
+
 
 class TimeAnnotationConfig(Config):
     id: str
@@ -23,6 +26,12 @@ def get_videos_by_date(
     date_list = postgres.selectVideoByDate(config.start_date, config.end_date)
     return date_list
 
+@op
+def get_videos_by_name(
+    postgres: PostgresResource, names: list[str]
+) -> list:
+    name_list = postgres.selectVideoByNames(names)
+    return name_list
 
 @op
 def get_videos_url(minio: MinioResource, videos: list) -> list[str]:

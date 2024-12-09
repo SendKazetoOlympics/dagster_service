@@ -18,6 +18,10 @@ class TimeAnnotationConfig(Config):
     end_time: float
     label: str
 
+@op
+def get_videos_url(minio: MinioResource, videos: list[str]) -> list[str]:
+    return [minio.get_object_presigned_url(data[1]) for data in videos]
+
 
 @op
 def get_videos_by_date(

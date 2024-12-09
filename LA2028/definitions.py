@@ -1,4 +1,4 @@
-from dagster import Definitions, load_assets_from_package_module, EnvVar
+from dagster import Definitions, FilesystemIOManager, load_assets_from_package_module, EnvVar
 
 from .assets import monocular_video_data, contact_detection
 from .resources import minio_io, label_studio_io, postgres_io
@@ -23,6 +23,7 @@ resources = {
         user=EnvVar("POSTGRES_USER"),
         password=EnvVar("POSTGRES_PASSWORD"),
     ),
+    "fs_io_manager": FilesystemIOManager(),
 }
 
 defs = Definitions(assets=all_assets, resources=resources, jobs=all_job)

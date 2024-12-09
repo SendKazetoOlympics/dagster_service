@@ -1,12 +1,14 @@
-from dagster import op, Config, MaterializeResult, asset, AssetKey
+from dagster import op, Config, MaterializeResult, asset, AssetExecutionContext, AssetKey
 import cv2
 from io import BytesIO
 from PIL import Image
 from ...resources.minio_io import MinioResource
 from ...resources.postgres_io import PostgresResource
+from .common_ops import get_videos_url
+from .raw_video import VideoSetConfig
 
 class CropFrameConfig(Config):
-    storage_path: str
+    video_set_config: VideoSetConfig
     n_frame_gap: int
 
 def get_time_from_frame(frame: int, fps: float) -> float:
@@ -17,7 +19,7 @@ def get_time_from_frame(frame: int, fps: float) -> float:
 def crop_frames_from_video(minio: MinioResource, postgres: PostgresResource, video_url: str, video_name: str, config: CropFrameConfig) -> MaterializeResult:
     cap = cv2.VideoCapture(video_url)
     upload_path_prefix = video_name.removeprefix("raw_data/").removesuffix(".mp4")
-    upload_path_prefix = config.storage_path + upload_path_prefix + '_'
+    upload_path_prefix = config.video_set_config.storage_path + upload_path_prefix + '_'
     upload_counter = 0
     gap_counter = 0
     print(f"Extracting frames from {video_name}")
@@ -43,6 +45,10 @@ def crop_frames_from_video(minio: MinioResource, postgres: PostgresResource, vid
     cap.release()
 
 @asset(deps=["video_ids"])
-def individual_frames(config: CropFrameConfig) -> None:
-    crop_frames_from_video()
+def individual_frames(minio: MinioResource, postgres: PostgresResource, config: CropFrameConfig) -> None:
+    with open(config.video_set_config.storage_path + 'video_ids.txt') as f:
+        video_ids = f.read().splitlines()
+    urls = get_videos_url(minio, video_ids)
+    for url, video_id in zip(urls, video_ids):
+        crop_frames_from_video(minio, postgres, video_url=url, video_name=video_id, config=config)
 

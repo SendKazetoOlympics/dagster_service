@@ -20,7 +20,7 @@ class TimeAnnotationConfig(Config):
 
 @op
 def get_videos_url(minio: MinioResource, videos: list[str]) -> list[str]:
-    return [minio.get_object_presigned_url(data[1]) for data in videos]
+    return [minio.get_object_presigned_url(data) for data in videos]
 
 
 @op

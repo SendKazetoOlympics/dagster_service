@@ -8,8 +8,9 @@ from .common_ops import get_videos_url
 from .raw_video import VideoSetConfig
 
 class CropFrameConfig(Config):
-    video_set_config: VideoSetConfig
-    n_frame_gap: int
+    storage_path: str
+    result_prefix: str
+    n_frame_gap: int = 1
 
 def get_time_from_frame(frame: int, fps: float) -> float:
     return frame * (1000.0 / fps)
@@ -18,8 +19,8 @@ def get_time_from_frame(frame: int, fps: float) -> float:
 @op
 def crop_frames_from_video(minio: MinioResource, postgres: PostgresResource, video_url: str, video_name: str, config: CropFrameConfig) -> MaterializeResult:
     cap = cv2.VideoCapture(video_url)
-    upload_path_prefix = video_name.removeprefix("raw_data/").removesuffix(".mp4")
-    upload_path_prefix = config.video_set_config.storage_path + upload_path_prefix + '_'
+    upload_path_prefix = video_name.split('/')[-1].split('.')[0]
+    upload_path_prefix = config.result_prefix + upload_path_prefix + '_'
     upload_counter = 0
     gap_counter = 0
     print(f"Extracting frames from {video_name}")
@@ -46,7 +47,7 @@ def crop_frames_from_video(minio: MinioResource, postgres: PostgresResource, vid
 
 @asset(deps=["video_ids"])
 def individual_frames(minio: MinioResource, postgres: PostgresResource, config: CropFrameConfig) -> None:
-    with open(config.video_set_config.storage_path + 'video_ids.txt') as f:
+    with open(config.storage_path + 'video_ids.txt') as f:
         video_ids = f.read().splitlines()
     urls = get_videos_url(minio, video_ids)
     for url, video_id in zip(urls, video_ids):

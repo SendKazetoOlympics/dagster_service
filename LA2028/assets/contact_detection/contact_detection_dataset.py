@@ -7,6 +7,9 @@ from sklearn.model_selection import train_test_split
 import os
 import numpy as np
 
+class LabelStudioConfig(Config):
+    project_id: str
+
 class DatasetConfig(Config):
     project_id: str
     n_frames: int
@@ -14,19 +17,8 @@ class DatasetConfig(Config):
     valid_labels: list[str]
 
 @asset(deps=["individual_frames"])
-def annotations(config: Config) -> AssetOut:
-    return AssetOut(config)
-
-@multi_asset(deps=[annotations, "individual_frames"], outs={"labeled_frames": AssetOut(), "dataset_description_yaml": AssetOut()})
-def labeled_frames_dataset(
-    minio: MinioResource, label_studio: LabelStudioResource, config: DatasetConfig
-):
+def label_studio_tasks(minio: MinioResource, label_studio: LabelStudioResource, config: LabelStudioConfig) -> AssetOut:
     id_list = [obj.object_name for obj in minio.list_objects("extracted_frames")]
-    if len(id_list) > config.n_frames:
-        # Shuffle the list
-        np.random.seed(config.seed)
-        np.random.shuffle(id_list)
-        id_list = id_list[: config.n_frames]
 
     ls_task_list = label_studio.list_tasks(project_id=config.project_id)
     task_filenames = [task.data["file_name"] for task in ls_task_list]
@@ -37,6 +29,12 @@ def labeled_frames_dataset(
         label_studio.create_task(
             project_id=config.project_id, url=url, file_name=frame_id
         )
+
+@multi_asset(deps=[label_studio_tasks, "individual_frames"], outs={"labeled_frames": AssetOut(), "dataset_description_yaml": AssetOut()})
+def labeled_frames_dataset(
+    minio: MinioResource, label_studio: LabelStudioResource, config: DatasetConfig
+):
+
 
     if not os.path.exists("data/annotated_detected_frames"):
         os.makedirs("data/annotated_detected_frames")

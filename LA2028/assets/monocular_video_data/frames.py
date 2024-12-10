@@ -8,8 +8,8 @@ from .common_ops import get_videos_url
 from .raw_video import VideoSetConfig
 
 class CropFrameConfig(Config):
-    storage_path: str
-    result_prefix: str
+    storage_path: str # Where the video name list are stored
+    result_prefix: str # Where to store the frames
     n_frame_gap: int = 1
 
 def get_time_from_frame(frame: int, fps: float) -> float:

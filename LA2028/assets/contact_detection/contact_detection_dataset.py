@@ -3,22 +3,24 @@ from ...resources.minio_io import MinioResource
 from ...resources.label_studio_io import LabelStudioResource
 from ...resources.postgres_io import PostgresResource
 from sklearn.model_selection import train_test_split
+from pathlib import Path
 
 import os
 import numpy as np
 
 class LabelStudioConfig(Config):
+    data_path: str # Where the frames are stored
     project_id: str
 
 class DatasetConfig(Config):
+    data_path: str # Where the frames are stored
+    output_path: str # Where to put the dataset
     project_id: str
-    n_frames: int
-    seed: int
     valid_labels: list[str]
 
 @asset(deps=["individual_frames"])
-def label_studio_tasks(minio: MinioResource, label_studio: LabelStudioResource, config: LabelStudioConfig) -> AssetOut:
-    id_list = [obj.object_name for obj in minio.list_objects("extracted_frames")]
+def label_studio_tasks(minio: MinioResource, label_studio: LabelStudioResource, config: LabelStudioConfig):
+    id_list = [obj.object_name for obj in minio.list_objects(config.data_path)]
 
     ls_task_list = label_studio.list_tasks(project_id=config.project_id)
     task_filenames = [task.data["file_name"] for task in ls_task_list]
@@ -30,31 +32,24 @@ def label_studio_tasks(minio: MinioResource, label_studio: LabelStudioResource, 
             project_id=config.project_id, url=url, file_name=frame_id
         )
 
-@multi_asset(deps=[label_studio_tasks, "individual_frames"], outs={"labeled_frames": AssetOut(), "dataset_description_yaml": AssetOut()})
-def labeled_frames_dataset(
-    minio: MinioResource, label_studio: LabelStudioResource, config: DatasetConfig
+
+@multi_asset(
+    deps=[label_studio_tasks, "individual_frames"],
+    outs={"training_data": AssetOut(), "test_data": AssetOut(),"dataset_description_yaml": AssetOut()},
+)
+def annotated_dataset(
+    label_studio: LabelStudioResource, minio: MinioResource, config: DatasetConfig
 ):
+    
+    id_list = [obj.object_name for obj in minio.list_objects(config.data_path)]
 
+    Path(config.output_path+'images/train').mkdir(parents=True, exist_ok=True)
+    Path(config.output_path+'images/val').mkdir(parents=True, exist_ok=True)
+    Path(config.output_path+'labels/train').mkdir(parents=True, exist_ok=True)
+    Path(config.output_path+'labels/val').mkdir(parents=True, exist_ok=True)
 
-    if not os.path.exists("data/annotated_detected_frames"):
-        os.makedirs("data/annotated_detected_frames")
-
-    if not os.path.exists("data/annotated_detected_frames/images"):
-        os.makedirs("data/annotated_detected_frames/images")
-    if not os.path.exists("data/annotated_detected_frames/images/train"):
-        os.makedirs("data/annotated_detected_frames/images/train")
-    if not os.path.exists("data/annotated_detected_frames/images/val"):
-        os.makedirs("data/annotated_detected_frames/images/val")
-
-    if not os.path.exists("data/annotated_detected_frames/labels"):
-        os.makedirs("data/annotated_detected_frames/labels")
-    if not os.path.exists("data/annotated_detected_frames/labels/train"):
-        os.makedirs("data/annotated_detected_frames/labels/train")
-    if not os.path.exists("data/annotated_detected_frames/labels/val"):
-        os.makedirs("data/annotated_detected_frames/labels/val")
-
-    with open("data/annotated_detected_frames/data.yaml", "w") as f:
-        f.write("path: data/annotated_detected_frames\n")
+    with open(config.output_path + "/data.yaml", "w") as f:
+        f.write("path: "+config.output_path+"\n")
         f.write("train: images/train\n")
         f.write("val: images/val\n")
         f.write("\n")
@@ -62,22 +57,10 @@ def labeled_frames_dataset(
         for index, label in enumerate(config.valid_labels):
             f.write(f"  {index}: {label.replace(' ','_')}\n")
 
-    with open("data/annotated_detected_frames/image_names.txt", "w") as f:
+    with open(config.output_path + "image_names.txt", "w") as f:
         for frame_id in id_list:
             new_frame_id = frame_id.split("/")[-1]
             f.write(new_frame_id + "\n")
-    return (
-        "data/annotated_detected_frames/image_names.txt",
-        "data/annotated_detected_frames/data.yaml",
-    )
-
-@multi_asset(
-    deps=["labeled_frames", "dataset_description_yaml"],
-    outs={"training_data": AssetOut(), "test_data": AssetOut()},
-)
-def annotated_dataset(
-    label_studio: LabelStudioResource, minio: MinioResource, config: DatasetConfig
-):
     ls_task_list = label_studio.list_tasks(project_id=config.project_id)
     train_results = []
     test_results = []
@@ -105,7 +88,7 @@ def annotated_dataset(
                         annotations.append((label, x, y, width, height))
                 new_frame_id = task.data["file_name"].split("/")[-1]
             with open(
-                "data/annotated_detected_frames/labels/train/" + new_frame_id.split(".")[0] + ".txt",
+                config.output_path+"labels/train/" + new_frame_id.split(".")[0] + ".txt",
                 "w",
             ) as f:
                 for annotation in annotations:
@@ -115,7 +98,7 @@ def annotated_dataset(
             train_results.append(
                 minio.download_object(
                     task.data["file_name"],
-                    f"data/annotated_detected_frames/images/train/{new_frame_id}",
+                    config.output_path+f"images/train/{new_frame_id}",
                 )
             )
         for frame_index in frame_indices_test:
@@ -136,7 +119,7 @@ def annotated_dataset(
                         annotations.append((label, x, y, width, height))
                 new_frame_id = task.data["file_name"].split("/")[-1]
             with open(
-                "data/annotated_detected_frames/labels/val/" + new_frame_id.split(".")[0] + ".txt",
+                config.output_path+"labels/val/" + new_frame_id.split(".")[0] + ".txt",
                 "w",
             ) as f:
                 for annotation in annotations:
@@ -146,9 +129,9 @@ def annotated_dataset(
             test_results.append(
                 minio.download_object(
                     task.data["file_name"],
-                    f"data/annotated_detected_frames/images/val/{new_frame_id}",
+                    config.output_path+f"images/val/{new_frame_id}",
                 )
             )
     else:
         raise ValueError("Not all tasks have been labeled")
-    return train_results, test_results
+    return train_results, test_results, config.output_path + "/data.yaml"

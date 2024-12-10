@@ -49,7 +49,7 @@ def annotated_dataset(
     Path(config.output_path+'labels/val').mkdir(parents=True, exist_ok=True)
 
     with open(config.output_path + "/data.yaml", "w") as f:
-        f.write("path: "+config.output_path+"\n")
+        f.write("path: "+os.getcwd() +'/'+config.output_path+"\n")
         f.write("train: images/train\n")
         f.write("val: images/val\n")
         f.write("\n")
